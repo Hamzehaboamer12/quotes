@@ -8,9 +8,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 //import com.google.gson.Gson;
 //import com.google.gson.GsonBuilder;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Type;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.*;
 
 
@@ -20,19 +21,80 @@ public class App {
 
     public static void main(String[] args) throws IOException {
 
-      ArrayList<quote> quotes = jsonParser();
-      int Random = new Random().nextInt(quotes.size());
-      System.out.println(quotes.get(Random));
+        ArrayList<quote> quotes = jsonParser();
+        int Random = new Random().nextInt(quotes.size());
+        System.out.println(quotes.get(Random));
 
 
     }
 
     public static ArrayList<quote> jsonParser() throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader("app/src/main/resources/qutes.json"));
-        GsonBuilder Builder = new GsonBuilder();
-        Gson gson = Builder.create();
-        return gson.fromJson(reader, new TypeToken<ArrayList<quote>>() {}.getType());
+//        BufferedReader reader = new BufferedReader(new FileReader("app/src/main/resources/qutes.json"));
+//        GsonBuilder Builder = new GsonBuilder();
+//        Gson gson = Builder.create();
+//        return gson.fromJson(reader, new TypeToken<ArrayList<quote>>() {}.getType());
+
+        // First step make a url for the API
+        URL url = new URL("http://api.forismatic.com/api/1.0/?method=getQuote&format=json&lang=en");
+
+        // second step connection with the API
+        HttpURLConnection URLConnection = (HttpURLConnection) url.openConnection();
+
+        //Select the method of contact
+        URLConnection.setRequestMethod("GET");
+
+
+        // Read the response from the API and save it in the variable Data
+        InputStreamReader QuoteInputStreamReader = new InputStreamReader(URLConnection.getInputStream());
+        BufferedReader QuoteBufferedReader = new BufferedReader(QuoteInputStreamReader);
+        String Data = QuoteBufferedReader.readLine();
+        QuoteBufferedReader.close();
+        //System.out.println(Data);
+
+
+       // convert the data to Java object using GSON
+
+        Gson gson = new Gson();
+        Webquotes webQuote = gson.fromJson(Data, Webquotes.class);
+        quote newQuote = new quote(webQuote.getQuoteAuthor(), webQuote.getQuoteText());
+        System.out.println(webQuote);
+
+
+        ArrayList<quote> listList = jsonParserLocal();
+        listList.add(newQuote);
+        App.writeFile(listList);
+
+       return listList;
+
+
 
     }
+     static void writeFile(ArrayList<quote> list) throws IOException {
+
+        // writer File
+        Writer writeFile = new FileWriter("app/src/main/resources/WriteFile.json");
+        GsonBuilder builder = new GsonBuilder();
+        Gson gson = builder.create();
+
+        gson.toJson(list, writeFile);
+
+
+    }
+
+
+    public static ArrayList<quote> jsonParserLocal() throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader("app/src/main/resources/qutes.json"));
+
+        Type arr = new TypeToken<ArrayList<quote>>() {
+        }.getType();
+
+        GsonBuilder builder = new GsonBuilder();
+        Gson gson = builder.create();
+
+        ArrayList<quote> list = gson.fromJson(reader, arr);
+        return list;
+
+    }
+
 
 }
